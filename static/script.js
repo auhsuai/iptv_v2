@@ -97,7 +97,31 @@ let state = {
     directUrl: '',
     retryCount: 0,
     favorites: JSON.parse(localStorage.getItem('iptv_favorites') || '[]'),
+    activeRecordings: []
 };
+
+// Poll backend recording status
+setInterval(async () => {
+    try {
+        const res = await fetch('/api/record/status');
+        const data = await res.json();
+        state.activeRecordings = data.active_urls || [];
+        updateRecordButtonUI();
+    } catch(e) {}
+}, 2000);
+
+function updateRecordButtonUI() {
+    if (!state.currentChannel) return;
+    const isRec = state.activeRecordings.includes(state.currentChannel.url);
+    if (isRec) {
+        dom.btnDownload.style.color = 'var(--danger)';
+        dom.downloadCount.textContent = 'REC';
+        dom.downloadCount.style.display = 'block';
+    } else {
+        dom.btnDownload.style.color = 'var(--text-primary)';
+        dom.downloadCount.style.display = 'none';
+    }
+}
 
 window.toggleFavorite = (e, url, name) => {
     e.stopPropagation();
@@ -435,60 +459,7 @@ function renderChannels() {
     });
 }
 
-// IndexedDB Segment Storage Utility for long recordings (e.g. Football matches)
-// ═══════════════════════════════════════════════════════════════════
-const DB_NAME = 'iptv_recorder_db_v3';
-const DB_VERSION = 1;
-const STORE_NAME = 'segments';
-
-function openDB() {
-    return new Promise((resolve, reject) => {
-        const request = indexedDB.open(DB_NAME, DB_VERSION);
-        request.onupgradeneeded = (e) => {
-            const db = e.target.result;
-            if (!db.objectStoreNames.contains(STORE_NAME)) {
-                db.createObjectStore(STORE_NAME, { keyPath: 'sn' });
-            }
-        };
-        request.onsuccess = (e) => resolve(e.target.result);
-        request.onerror = (e) => reject(e.target.error);
-    });
-}
-
-async function saveSegment(sn, data) {
-    try {
-        const db = await openDB();
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        const store = tx.objectStore(STORE_NAME);
-        store.put({ sn, data });
-    } catch (e) {
-        console.error('Failed to save segment to IndexedDB:', e);
-    }
-}
-
-async function clearSegments() {
-    try {
-        const db = await openDB();
-        const tx = db.transaction(STORE_NAME, 'readwrite');
-        tx.objectStore(STORE_NAME).clear();
-    } catch (e) {
-        console.error('Failed to clear segments:', e);
-    }
-}
-
-async function getSegmentCount() {
-    try {
-        const db = await openDB();
-        return new Promise((resolve, reject) => {
-            const tx = db.transaction(STORE_NAME, 'readonly');
-            const request = tx.objectStore(STORE_NAME).count();
-            request.onsuccess = () => resolve(request.result);
-            request.onerror = () => reject(request.error);
-        });
-    } catch (e) {
-        return 0;
-    }
-}
+// Removed IndexedDB chunking
 
 function playChannel(ch) {
     state.currentChannel = ch;
@@ -559,7 +530,7 @@ function startPlayback(url, ch, isProxy = false, isCatchup = false) {
         state.isLive = false; // Direct MP4/MKV files are VOD
         state.isDirect = true;
         state.directUrl = url;
-        updateDownloadButtonUI();
+        updateRecordButtonUI();
         dom.video.src = url;
         dom.video.play().catch(() => {});
         dom.playerLoader.style.display = 'none';
@@ -594,33 +565,11 @@ function startPlayback(url, ch, isProxy = false, isCatchup = false) {
         hls.loadSource(url);
     });
 
-    hls.on(Hls.Events.FRAG_LOADED, (event, data) => {
-        if (data.frag && data.payload) {
-            try {
-                if (data.payload.byteLength === 0) return;
-                const sn = data.frag.sn;
-                const clonedData = data.payload.slice(0);
-                
-                dom.btnDownload.style.display = 'inline-flex';
-                
-                saveSegment(sn, clonedData).then(() => {
-                    updateDownloadButtonUI();
-                }).catch(err => {
-                    console.error('[Recorder] Save failed sn=' + sn, err);
-                });
-            } catch (err) {
-                console.error('[Recorder] Clone failed (maybe detached buffer):', err);
-            }
-        }
-    });
-
     hls.on(Hls.Events.MANIFEST_PARSED, () => {
         state.retryCount = 0;
         dom.playerLoader.style.display = 'none';
         dom.video.play().catch(e => console.log('Autoplay blocked:', e));
         setupPlayerSettings();
-        // Show download button - recording starts with FRAG_LOADED
-        dom.btnDownload.style.display = 'inline-flex';
     });
 
     hls.on(Hls.Events.ERROR, (event, data) => {
@@ -660,12 +609,7 @@ function startPlayback(url, ch, isProxy = false, isCatchup = false) {
     });
 }
 
-function destroyHls(clearRec = true) {
-    if (clearRec) {
-        state.recordedSegments = [];
-        clearSegments();
-        dom.btnDownload.style.display = 'none';
-    }
+function destroyHls() {
     state.isDirect = false;
     state.directUrl = '';
     if (state.hls) {
@@ -1310,107 +1254,46 @@ function setupEventListeners() {
 
     // Download segment/video
     dom.btnDownload.onclick = async () => {
-        if (state.isDirect && state.directUrl) {
-            const a = document.createElement('a');
-            a.href = state.directUrl;
-            a.target = '_blank';
-            const chName = state.currentChannel ? state.currentChannel.name.replace(/[^a-zA-Z0-9\s-_]/g, '') : 'video';
-            a.download = `${chName}.mp4`;
-            a.click();
-            return;
-        }
-
-        const chName = state.currentChannel ? state.currentChannel.name.replace(/[^a-zA-Z0-9\s-_]/g, '') : 'iptv';
-        const defaultName = `${chName}_${Date.now()}.ts`;
-
-        // If File System Access API is supported, let user choose exactly where to save (D:\, E:\, etc.)
-        if (window.showSaveFilePicker) {
+        if (!state.currentChannel) return;
+        const isRec = state.activeRecordings.includes(state.currentChannel.url);
+        
+        if (isRec) {
+            // Stop recording
             try {
-                const handle = await window.showSaveFilePicker({
-                    suggestedName: defaultName,
-                    types: [{
-                        description: 'MPEG-2 Transport Stream',
-                        accept: { 'video/mp2t': ['.ts'] }
-                    }]
+                const res = await fetch('/api/record/stop', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ url: state.currentChannel.url })
                 });
-
-                toast('Exporting video to disk...', 'info');
-                const writable = await handle.createWritable();
-
-                const db = await openDB();
-                const tx = db.transaction(STORE_NAME, 'readonly');
-                const store = tx.objectStore(STORE_NAME);
-                const request = store.getAll();
-
-                request.onsuccess = async () => {
-                    const records = request.result;
-                    if (records.length === 0) {
-                        toast('No recorded video segments found!', 'error');
-                        await writable.close();
-                        return;
-                    }
-                    records.sort((a, b) => a.sn - b.sn);
-
-                    for (const r of records) {
-                        await writable.write(r.data);
-                    }
-                    await writable.close();
-                    toast('Video saved successfully!', 'success');
-                };
-
-                request.onerror = async (e) => {
-                    await writable.close();
-                    toast('Error reading disk data!', 'error');
-                };
-            } catch (err) {
-                // User cancelled the file picker or error occurred
-                if (err.name !== 'AbortError') {
-                    console.error(err);
-                    toast('Error selecting save location!', 'error');
+                const data = await res.json();
+                toast(data.message, data.status === 'success' ? 'success' : 'error');
+                if (data.status === 'success') {
+                    state.activeRecordings = state.activeRecordings.filter(u => u !== state.currentChannel.url);
+                    updateRecordButtonUI();
                 }
+            } catch(e) {
+                toast('Error stopping recording', 'error');
             }
-            return;
-        }
-
-        // Fallback for browsers that do not support showSaveFilePicker
-        toast('Preparing to export file (this may take a few seconds)...', 'info');
-
-        try {
-            const db = await openDB();
-            const tx = db.transaction(STORE_NAME, 'readonly');
-            const store = tx.objectStore(STORE_NAME);
-            const request = store.getAll();
-            
-            request.onsuccess = () => {
-                const records = request.result;
-                if (records.length === 0) {
-                    toast('No recorded video segments to download!', 'error');
-                    return;
+        } else {
+            // Start recording
+            try {
+                const res = await fetch('/api/record/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ 
+                        url: state.currentChannel.url,
+                        channel_name: state.currentChannel.name 
+                    })
+                });
+                const data = await res.json();
+                toast(data.message, data.status === 'success' ? 'info' : 'error');
+                if (data.status === 'success') {
+                    state.activeRecordings.push(state.currentChannel.url);
+                    updateRecordButtonUI();
                 }
-                
-                records.sort((a, b) => a.sn - b.sn);
-                
-                const blob = new Blob(records.map(r => r.data), { type: 'video/mp2t' });
-                const url = URL.createObjectURL(blob);
-                
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = defaultName;
-                
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                
-                toast('Video downloaded successfully!', 'success');
-            };
-            
-            request.onerror = (e) => {
-                throw e.target.error;
-            };
-        } catch (err) {
-            console.error(err);
-            toast('An error occurred while downloading!', 'error');
+            } catch(e) {
+                toast('Error starting recording', 'error');
+            }
         }
     };
 

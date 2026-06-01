@@ -11,6 +11,9 @@ import re
 import time
 import urllib.parse
 import xml.etree.ElementTree as ET
+import subprocess
+import uuid
+import sys
 from typing import List, Optional
 from urllib.parse import urljoin, urlparse
 
@@ -29,6 +32,10 @@ else:
     DATA_DIR = os.path.join(BASE_DIR, "data")
 
 os.makedirs(DATA_DIR, exist_ok=True)
+
+RECORDINGS_DIR = os.path.join(DATA_DIR, "recordings")
+os.makedirs(RECORDINGS_DIR, exist_ok=True)
+ACTIVE_RECORDINGS = {}
 
 PLAYLISTS_FILE = os.path.join(DATA_DIR, "playlists.json")
 LANGUAGES = {}
