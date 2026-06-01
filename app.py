@@ -922,6 +922,53 @@ def _get_origin(url: str) -> str:
     parsed = urllib.parse.urlparse(url)
     return f"{parsed.scheme}://{parsed.netloc}"
 
+@app.get("/api/transcode")
+async def transcode_stream(url: str, request: Request):
+    if "|" in url:
+        url = url.split("|", 1)[0]
+    
+    try:
+        import imageio_ffmpeg
+        ffmpeg_exe = imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        raise HTTPException(status_code=500, detail="FFmpeg not available")
+        
+    cmd = [
+        ffmpeg_exe,
+        "-y",
+        "-re", # Read input at native frame rate to avoid dropping frames if source is live
+        "-i", url,
+        "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
+        "-c:a", "aac",
+        "-f", "matroska",
+        "pipe:1"
+    ]
+    
+    creationflags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+    process = await asyncio.create_subprocess_exec(
+        *cmd,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.DEVNULL,
+        creationflags=creationflags
+    )
+    
+    async def generate():
+        try:
+            while True:
+                chunk = await process.stdout.read(65536)
+                if not chunk:
+                    break
+                yield chunk
+        except asyncio.CancelledError:
+            pass
+        finally:
+            try:
+                process.terminate()
+            except:
+                pass
+            
+    return StreamingResponse(generate(), media_type="video/x-matroska")
+
 @app.get("/api/proxy")
 async def proxy_stream(url: str, request: Request):
     custom_headers = {}

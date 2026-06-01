@@ -62,6 +62,7 @@ const dom = {
     btnPip:             $('#btn-pip'),
     btnSettings:        $('#btn-settings'),
     settingsPanel:      $('#settings-panel'),
+    toggleTranscode:    $('#toggle-transcode'),
     qualityList:        $('#quality-list'),
     audioList:          $('#audio-list'),
     nowPlaying:         $('#now-playing'),
@@ -522,6 +523,18 @@ function startPlayback(url, ch, isProxy = false, isCatchup = false) {
         dom.video.style.display = 'none';
         dom.youtubePlayer.style.display = 'block';
         dom.youtubePlayer.src = `https://www.youtube.com/embed/${youtubeId}?autoplay=1&controls=1`;
+        dom.playerLoader.style.display = 'none';
+        return;
+    }
+
+    if (dom.toggleTranscode && dom.toggleTranscode.checked) {
+        state.isLive = true;
+        state.isDirect = true;
+        state.directUrl = url;
+        updateRecordButtonUI();
+        const transcodeUrl = `/api/transcode?url=${encodeURIComponent(url)}`;
+        dom.video.src = transcodeUrl;
+        dom.video.play().catch(() => {});
         dom.playerLoader.style.display = 'none';
         return;
     }

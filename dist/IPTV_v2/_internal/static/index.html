@@ -134,6 +134,13 @@
 
                 <!-- Settings Panel -->
                 <div id="settings-panel" class="settings-panel" style="display:none;">
+                    <div class="settings-section" id="section-transcode">
+                        <h4>Force Transcode</h4>
+                        <label style="display:flex; align-items:center; cursor:pointer;">
+                            <input type="checkbox" id="toggle-transcode" style="margin-right:8px;">
+                            <span style="font-size:14px; opacity:0.8;">Fix Codec / AC3 Audio</span>
+                        </label>
+                    </div>
                     <div class="settings-section" id="section-quality">
                         <h4 data-i18n="settings_quality">Chat luong</h4>
                         <div id="quality-list" class="settings-list"></div>
@@ -280,7 +287,7 @@
         </div>
     </div>
 
-    <script src="script.js?v=20260601_13"></script>
+    <script src="script.js?v=20260601_14"></script>
 </body>
 
 </html>
