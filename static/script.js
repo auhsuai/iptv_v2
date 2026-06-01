@@ -468,7 +468,7 @@ function playChannel(ch) {
 
     // Reset settings panel
     dom.settingsPanel.style.display = 'none';
-    dom.btnSettings.style.display = 'none';
+    dom.btnSettings.style.display = 'inline-flex';
 
     // Update UI
     dom.playerWelcome.style.display = 'none';
@@ -834,11 +834,8 @@ function setupPlayerSettings() {
         $('#section-audio').style.display = 'none';
     }
 
-    if (hasQualities || hasAudioTracks) {
-        dom.btnSettings.style.display = 'inline-flex';
-    } else {
-        dom.btnSettings.style.display = 'none';
-    }
+    // Always show settings button because we have the Force Transcode toggle
+    dom.btnSettings.style.display = 'inline-flex';
 }
 
 function updateSettingsUI() {
