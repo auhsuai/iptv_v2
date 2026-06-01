@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IPTV v2</title>
+    <meta name="description" content="IPTV Player - Stream online channels">
+    <link rel="stylesheet" href="style.css?v=20260601_10">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13"></script>
+</head>
+
+<body>
+    <div id="app">
+        <!-- ═══ SIDEBAR ═══ -->
+        <aside id="sidebar" class="sidebar">
+            <div id="toast" class="toast"></div>
+            <header class="sidebar-header">
+                <h1 class="logo">
+                    <span data-i18n="logo_title">IPTV</span>
+                    <span class="version" data-i18n="logo_version">v2</span>
+                </h1>
+                <button id="btn-add" class="btn btn-primary">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round">
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    <span data-i18n="btn_add">Add M3U</span>
+                </button>
+            </header>
+
+            <!-- Playlist Selector and actions -->
+            <div class="playlist-bar" id="playlist-bar" style="display:none;">
+                <div class="playlist-select-wrapper">
+                    <select id="playlist-select"></select>
+                    <button id="btn-playlist-menu" class="btn-icon" title="Menu playlist">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5" stroke-linecap="round">
+                            <circle cx="12" cy="12" r="1" />
+                            <circle cx="12" cy="5" r="1" />
+                            <circle cx="12" cy="19" r="1" />
+                        </svg>
+                    </button>
+                    <!-- Playlist Options Dropdown Menu -->
+                    <div id="playlist-menu" class="playlist-menu" style="display:none;">
+                        <button id="btn-sync" class="menu-item">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round">
+                                <path d="M23 4v6h-6" />
+                                <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                            </svg>
+                            <span data-i18n="btn_sync_playlist_title">Dong bo</span>
+                        </button>
+                        <button id="btn-scan" class="menu-item">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round">
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <span data-i18n="btn_scan_title">Quet trang thai</span>
+                        </button>
+                        <button id="btn-epg" class="menu-item">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round">
+                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                <line x1="16" y1="2" x2="16" y2="6" />
+                                <line x1="8" y1="2" x2="8" y2="6" />
+                                <line x1="3" y1="10" x2="21" y2="10" />
+                            </svg>
+                            <span data-i18n="btn_epg_playlist_title">Cap nhat EPG</span>
+                        </button>
+                        <button id="btn-rename" class="menu-item">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round">
+                                <path d="M12 20h9" />
+                                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                            </svg>
+                            <span data-i18n="btn_rename_playlist_title">Doi ten</span>
+                        </button>
+                        <div class="menu-divider"></div>
+                        <button id="btn-delete-playlist" class="menu-item text-danger">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round">
+                                <polyline points="3 6 5 6 21 6" />
+                                <path
+                                    d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                            </svg>
+                            <span data-i18n="btn_delete_playlist_title">Xoa playlist</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group Filter -->
+            <div class="group-bar" id="group-bar" style="display:none;">
+                <div class="group-chips" id="group-chips"></div>
+            </div>
+
+            <!-- Search -->
+            <div class="search-bar">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+                <input type="text" id="search-input" data-i18n-placeholder="search_placeholder"
+                    placeholder="Tim kenh..." autocomplete="off">
+            </div>
+
+            <!-- Channel List -->
+            <div id="channel-list" class="channel-list">
+                <div class="empty-state" id="empty-state">
+                    <div class="empty-icon-static"></div>
+                    <p data-i18n="empty_state_title">Chua co kenh nao</p>
+                    <span data-i18n="empty_state_subtitle">Nhan Them M3U de bat dau</span>
+                </div>
+            </div>
+
+            <!-- Channel Count -->
+            <div class="sidebar-footer" id="sidebar-footer" style="display:none;">
+                <span id="channel-count">0 kenh</span>
+            </div>
+        </aside>
+
+        <!-- ═══ PLAYER AREA ═══ -->
+        <main class="main">
+            <div class="player-container" id="player-container">
+                <video id="video" autoplay playsinline></video>
+                <iframe id="youtube-player"
+                    style="display:none; width: 100%; height: 100%; border: none; background: #000;"
+                    allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+
+                <!-- Settings Panel -->
+                <div id="settings-panel" class="settings-panel" style="display:none;">
+                    <div class="settings-section" id="section-quality">
+                        <h4 data-i18n="settings_quality">Chat luong</h4>
+                        <div id="quality-list" class="settings-list"></div>
+                    </div>
+                    <div class="settings-section" id="section-audio">
+                        <h4 data-i18n="settings_audio">Am thanh</h4>
+                        <div id="audio-list" class="settings-list"></div>
+                    </div>
+                </div>
+
+                <!-- Loading Spinner -->
+                <div id="player-loader" class="player-loader" style="display:none;">
+                    <div class="spinner"></div>
+                    <span data-i18n="player_loader_text">Dang tai...</span>
+                </div>
+
+                <!-- Error Overlay -->
+                <div id="player-error" class="player-error" style="display:none;">
+                    <div class="error-icon-static"></div>
+                    <p id="error-msg" data-i18n="player_error_title">Không thể phát kênh này</p>
+                    <button id="btn-retry" class="btn btn-small" data-i18n="btn_retry">Thử lại</button>
+                </div>
+
+                <!-- Welcome Screen -->
+                <div id="player-welcome" class="player-welcome">
+                    <div class="welcome-icon-static"></div>
+                    <h2 data-i18n="player_welcome_title">IPTV v2</h2>
+                    <p data-i18n="player_welcome_subtitle">Chọn một kênh để bắt đầu xem</p>
+                </div>
+
+                <!-- Controls Bar -->
+                <div class="controls-bar" id="controls-bar">
+                    <!-- Timeline Container for VOD/Seek support -->
+                    <div class="timeline-container" id="timeline-container" style="display:none;">
+                        <input type="range" id="timeline-slider" min="0" max="0" value="0" class="timeline-slider">
+                        <span id="time-display" class="time-display">00:00 / 00:00</span>
+                    </div>
+
+                    <div class="controls-row">
+                        <button id="btn-play" class="ctrl-btn" data-i18n-title="btn_play_title">
+                            <svg class="icon-play" width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                                <polygon points="5 3 19 12 5 21" />
+                            </svg>
+                            <svg class="icon-pause" width="22" height="22" viewBox="0 0 24 24" fill="currentColor"
+                                style="display:none">
+                                <rect x="6" y="4" width="4" height="16" />
+                                <rect x="14" y="4" width="4" height="16" />
+                            </svg>
+                        </button>
+
+                        <!-- Download segment button -->
+                        <button id="btn-download" class="ctrl-btn" data-i18n-title="btn_download_title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            <span id="download-count" class="download-count" style="display:none;">0</span>
+                        </button>
+
+                        <div class="volume-group">
+                            <button id="btn-mute" class="ctrl-btn" data-i18n-title="btn_mute_title">
+                                <svg class="icon-vol" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                                    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07" />
+                                </svg>
+                                <svg class="icon-muted" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                                    stroke="currentColor" stroke-width="2" stroke-linecap="round" style="display:none">
+                                    <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                                    <line x1="23" y1="9" x2="17" y2="15" />
+                                    <line x1="17" y1="9" x2="23" y2="15" />
+                                </svg>
+                            </button>
+                            <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1"
+                                class="slider-vol">
+                        </div>
+
+                        <div class="spacer"></div>
+
+                        <span id="now-playing" class="now-playing"></span>
+
+                        <!-- Quality settings button -->
+                        <button id="btn-settings" class="ctrl-btn" style="display:none;">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round">
+                                <circle cx="12" cy="12" r="3" />
+                                <path
+                                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                            </svg>
+                        </button>
+
+                        <button id="btn-pip" class="ctrl-btn" title="Picture in Picture">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                <rect x="11" y="11" width="8" height="6" rx="1" ry="1"></rect>
+                            </svg>
+                        </button>
+
+                        <button id="btn-fullscreen" class="ctrl-btn" data-i18n-title="btn_fullscreen_title">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round">
+                                <path
+                                    d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- EPG schedule strip at bottom of player -->
+            <div class="epg-schedule-strip" id="epg-schedule-strip" style="display: none;"></div>
+        </main>
+    </div>
+
+    <!-- ═══ MODAL OVERLAY (Reusable for Import, EPG, Rename) ═══ -->
+    <div id="modal-overlay" class="modal-overlay" style="display:none;">
+        <div class="modal">
+            <h3 id="modal-title"></h3>
+
+            <!-- Standard text input -->
+            <input type="text" id="modal-input" autocomplete="off">
+
+            <!-- Local file input container (shown only during import) -->
+            <div id="modal-file-container" style="display:none; margin-top: 12px; width: 100%;">
+                <label for="modal-file-input" class="file-upload-label">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="17 8 12 3 7 8" />
+                        <line x1="12" y1="3" x2="12" y2="15" />
+                    </svg>
+                    <span id="file-upload-text" data-i18n="file_upload_select">Select local M3U file...</span>
+                </label>
+                <input type="file" id="modal-file-input" accept=".m3u,.m3u8" style="display:none;">
+            </div>
+
+            <p id="modal-error" class="modal-error" style="display:none;"></p>
+            <div class="modal-actions">
+                <button id="modal-cancel" class="btn btn-ghost" data-i18n="btn_cancel">Cancel</button>
+                <button id="modal-ok" class="btn btn-primary" data-i18n="btn_ok">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js?v=20260601_12"></script>
+</body>
+
+</html>

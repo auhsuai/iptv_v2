@@ -21,8 +21,13 @@ from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "data")
+if getattr(sys, 'frozen', False):
+    BASE_DIR = sys._MEIPASS
+    DATA_DIR = os.path.join(os.environ.get('APPDATA', os.path.expanduser("~")), 'IPTV_v2', 'data')
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+    DATA_DIR = os.path.join(BASE_DIR, "data")
+
 os.makedirs(DATA_DIR, exist_ok=True)
 
 PLAYLISTS_FILE = os.path.join(DATA_DIR, "playlists.json")
@@ -1045,6 +1050,35 @@ app.mount("/", StaticFiles(directory=os.path.join(BASE_DIR, "static"), html=True
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("app:app", host="0.0.0.0", port=8001, reload=True, reload_dirs=[os.path.dirname(os.path.abspath(__file__))])
+    import threading
 
-print("http://localhost:8001")
+    try:
+        import webview
+        USE_WEBVIEW = True
+    except ImportError:
+        USE_WEBVIEW = False
+
+    if USE_WEBVIEW:
+        import time
+        def start_server():
+            uvicorn.run(app, host="127.0.0.1", port=8001, log_level="error")
+        
+        server_thread = threading.Thread(target=start_server, daemon=True)
+        server_thread.start()
+        
+        # Give uvicorn a second to boot up before showing webview
+        time.sleep(1)
+        
+        class Api:
+            def toggle_fullscreen(self):
+                import webview
+                if webview.windows:
+                    webview.windows[0].toggle_fullscreen()
+                    
+        api = Api()
+        
+        print("Starting Desktop App (pywebview)...")
+        webview.create_window("IPTV v2 Premium", "http://127.0.0.1:8001", width=1280, height=720, background_color="#07090e", js_api=api)
+        webview.start()
+    else:
+        uvicorn.run("app:app", host="0.0.0.0", port=8001, reload=True, reload_dirs=[os.path.dirname(os.path.abspath(__file__))])

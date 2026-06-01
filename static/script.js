@@ -1296,11 +1296,15 @@ function setupEventListeners() {
 
     // Fullscreen
     dom.btnFullscreen.onclick = () => {
-        if (!document.fullscreenElement) {
-            dom.playerContainer.requestFullscreen?.() ||
-            dom.playerContainer.webkitRequestFullscreen?.();
+        if (window.pywebview && window.pywebview.api) {
+            window.pywebview.api.toggle_fullscreen();
         } else {
-            document.exitFullscreen?.();
+            if (!document.fullscreenElement) {
+                dom.playerContainer.requestFullscreen?.() ||
+                dom.playerContainer.webkitRequestFullscreen?.();
+            } else {
+                document.exitFullscreen?.();
+            }
         }
     };
 
