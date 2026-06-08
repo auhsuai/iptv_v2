@@ -51,5 +51,12 @@
   "epg_badge_catchup": "Replay",
   "btn_sync_playlist_title": "Sync playlist",
   "toast_sync_success": "Sync completed. Reloaded {count} channels.",
-  "btn_download_title": "Download watched segment"
+  "btn_download_title": "Download watched segment",
+  "settings_scan_concurrency": "Scan Speed (Threads)",
+  "settings_scan_concurrency_desc": "Increase threads to scan channels faster. Requires a strong network.",
+  "login_remember_me": "Remember Me",
+  "loader_connecting": "Connecting to server...",
+  "loader_init": "Initializing stream...",
+  "loader_buffering": "Buffering video...",
+  "loader_ready": "Starting playback..."
 }

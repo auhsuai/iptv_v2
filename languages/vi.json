@@ -51,5 +51,12 @@
   "epg_badge_catchup": "Xem lai",
   "btn_sync_playlist_title": "Dong bo danh sach phat",
   "toast_sync_success": "Dong bo hoan tat. Da tai lai {count} kenh.",
-  "btn_download_title": "Tai doan video da xem"
+  "btn_download_title": "Tai doan video da xem",
+  "settings_scan_concurrency": "Toc do quet (So luong)",
+  "settings_scan_concurrency_desc": "Tang so luong de quet kenh nhanh hon. Yeu cau mang phai manh.",
+  "login_remember_me": "Ghi nho dang nhap",
+  "loader_connecting": "Dang ket noi...",
+  "loader_init": "Dang khoi tao luong...",
+  "loader_buffering": "Dang nap du lieu...",
+  "loader_ready": "Bat dau phat..."
 }
